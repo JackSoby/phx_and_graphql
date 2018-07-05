@@ -2,7 +2,7 @@ defmodule PhxAndGraphql.Account do
   @moduledoc """
   The Account context.
   """
-
+  require IEx
   import Ecto.Query, warn: false
   alias PhxAndGraphql.Repo
 
@@ -92,7 +92,7 @@ defmodule PhxAndGraphql.Account do
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_user(%User{} = user) do
+  def delete_user(user) do
     Repo.delete(user)
   end
 

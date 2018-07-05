@@ -1,14 +1,40 @@
 defmodule PhxAndGraphqlWeb.Graphql.Schema do
-    use Absinthe.Schema
-    import_types Absinthe.Type.Custom
-    import_types PhxAndGraphqlWeb.Schema.AccountTypes
-    alias PhxAndGraphqlWeb.Resolvers
+  use Absinthe.Schema
+  import_types(Absinthe.Type.Custom)
+  import_types(PhxAndGraphqlWeb.Schema.AccountTypes)
 
+  require IEx
 
-    query do
-        field :all_users, non_null(list_of(non_null(:user))) do
-        resolve &PhxAndGraphqlWeb.Graphql.Resolvers.Account.all_users/3
-        end
-    end    
+  query do
+    field :all_users, non_null(list_of(non_null(:user))) do
+      resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.all_users/3)
+    end
+
+    field :get_user, non_null(:user) do
+      arg(:id, non_null(:integer))
+
+      resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.get_user/3)
+    end
+  end
+
+  mutation do
+    field :create_user, :user do
+      arg(:name, non_null(:string))
+
+      resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.create_users/3)
+    end
+
+    field :delete_user, :user do
+      arg(:id, non_null(:integer))
+
+      resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.delete_user/3)
+    end
+
+    field :update_user, :user do
+      arg(:id, non_null(:integer))
+      arg(:params, non_null(:update_user_params))
+
+      resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.update_user/3)
+    end
+  end
 end
-  
