@@ -10,8 +10,9 @@ defmodule PhxAndGraphqlWeb.Graphql.Schema do
       resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.all_users/3)
     end
 
-    field :get_user, non_null(:user) do
-      arg(:id, non_null(:integer))
+    field :user, type: :user do
+      @desc "The contact ID"
+      arg(:id, non_null(:id))
 
       resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.get_user/3)
     end
