@@ -11,6 +11,10 @@
 //
 // If you no longer want to use a dependency, remember
 // to also remove its path from "config.paths.watched".
+
+const Elm = require('../elm/Main');
+Elm.Main.embed(document.getElementById('main'));
+
 import "phoenix_html"
 
 // Import local files
