@@ -18,6 +18,9 @@ import GraphQL.Request.Builder as Builder
         , string
         , with
         )
+import Html.Attributes exposing (class, id, placeholder, value)
+import Html.Events exposing (..)
+
 
 
 main =
@@ -36,7 +39,10 @@ type alias Model =
 
 
 type alias User =
-    { name : String }
+    {
+         name : String,
+         id : String
+     }
 
 
 
@@ -57,6 +63,8 @@ init =
 type Msg
     = GetUser (Result GraphQL.Client.Http.Error User)
     | FetchUserList (Result GraphQL.Client.Http.Error UserList)
+    | DeleteUser String
+    | LoadAll (Result GraphQL.Client.Http.Error User)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -78,9 +86,20 @@ update msg model =
             in 
             ( model, Cmd.none )
 
+        DeleteUser id ->
+            ( model, sendDeleteUser id )
+
+        LoadAll response -> 
+            ( model, returnAllUsers )
+
 view : Model -> Html Msg
 view model =
-    div [] [ text "yo world" ]
+    let
+        users = 
+            model.users
+                |> List.map(\user -> div [ class "user-holder" ] [ p [] [text user.name], div [ (onClick (DeleteUser user.id)), class "delete-button" ][text "X"] ] ) 
+    in 
+    div [ class "user-wrapper" ]  users  
 
 
 fetchUser : Int -> Request Query User
@@ -96,8 +115,6 @@ fetchUser id =
                     [ ( "id", userID ) ]
                     userSpec
                 )
-        log = 
-        Debug.log "user " userField
 
         params =
             { userID = id }
@@ -105,6 +122,29 @@ fetchUser id =
         userField
             |> GraphQL.Request.Builder.queryDocument
             |> GraphQL.Request.Builder.request params
+
+
+deleteUser : String -> Request Mutation User
+deleteUser id =
+    let
+        userID =
+            Arg.variable (Var.required "userID" .userID Var.string)
+
+        userField =
+            GraphQL.Request.Builder.extract
+                (field
+                    "delete_user"
+                    [ ( "id", userID ) ]
+                    userSpec
+                )
+
+        params =
+            { userID = id}
+    in
+        userField
+            |> GraphQL.Request.Builder.mutationDocument
+            |> GraphQL.Request.Builder.request params
+
 
 
 fetchAllUsers : Request Query UserList
@@ -137,6 +177,14 @@ returnUser id =
         |> Task.attempt GetUser
 
 
+sendDeleteUser : String -> Cmd Msg
+sendDeleteUser id =
+    id
+        |> deleteUser
+        |> GraphQL.Client.Http.sendMutation "/graphiql"
+        |> Task.attempt LoadAll
+
+
 returnAllUsers : Cmd Msg
 returnAllUsers =
      fetchAllUsers
@@ -153,6 +201,8 @@ userSpec =
     User
         |> GraphQL.Request.Builder.object
         |> with (field "name" [] string)
+        |> with (field "id" [] string)
+
 
 
 userListSpec : ValueSpec NonNull ObjectType UserList vars

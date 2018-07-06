@@ -20,7 +20,7 @@ defmodule PhxAndGraphqlWeb.Graphql.Resolvers.Account do
     {:ok, user}
   end
 
-  def delete_user(_root, args, _info) do
+  def delete_user(_root, args, _info) doå
     user = Account.get_user!(args.id)
     dead_user = Account.delete_user(user)
     {:ok, user}
