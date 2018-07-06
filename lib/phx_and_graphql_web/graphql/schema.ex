@@ -30,7 +30,7 @@ defmodule PhxAndGraphqlWeb.Graphql.Schema do
     end
 
     field :delete_user, :user do
-      arg(:id, non_null(:integer))
+      arg(:id, non_null(:string))
 
       resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.delete_user/3)
     end
