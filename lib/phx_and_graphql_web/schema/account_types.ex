@@ -13,4 +13,8 @@ defmodule PhxAndGraphqlWeb.Schema.AccountTypes do
   input_object :update_user_params do
     field(:name, non_null(:string))
   end
+
+  object :user_list do
+    field(:users, non_null(list_of(non_null(:user))))
+  end
 end

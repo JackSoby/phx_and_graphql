@@ -31,6 +31,7 @@ main =
 
 type alias Model =
     { 
+        users : List User
     }
 
 
@@ -39,6 +40,8 @@ type alias User =
 
 
 
+type alias UserList =
+    { users : List User }
 
 
 subscriptions : Model -> Sub Msg
@@ -47,17 +50,32 @@ subscriptions model =
     
 init : ( Model, Cmd Msg )
 init =
-    ( Model, returnUser 3 )
+    ( Model [], returnAllUsers )
 
 
 
 type Msg
     = GetUser (Result GraphQL.Client.Http.Error User)
+    | FetchUserList (Result GraphQL.Client.Http.Error UserList)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GetUser response ->
+            ( model, Cmd.none )
+
+        FetchUserList (Ok response) ->
+            let
+                log = 
+                    Debug.log "users " response.users
+            in 
+            ( Model response.users, Cmd.none )
+
+        FetchUserList (Err error) ->
+            let
+                log = 
+                    Debug.log "error " error
+            in 
             ( model, Cmd.none )
 
 view : Model -> Html Msg
@@ -78,6 +96,8 @@ fetchUser id =
                     [ ( "id", userID ) ]
                     userSpec
                 )
+        log = 
+        Debug.log "user " userField
 
         params =
             { userID = id }
@@ -85,6 +105,28 @@ fetchUser id =
         userField
             |> GraphQL.Request.Builder.queryDocument
             |> GraphQL.Request.Builder.request params
+
+
+fetchAllUsers : Request Query UserList
+fetchAllUsers  =
+    let
+       
+
+        userField =
+            GraphQL.Request.Builder.extract
+                (field
+                    "users"
+                    [  ]
+                    userListSpec
+                )
+
+        params =
+            {  }
+    in
+        userField
+            |> GraphQL.Request.Builder.queryDocument
+            |> GraphQL.Request.Builder.request params
+
 
 
 returnUser : Int -> Cmd Msg
@@ -95,11 +137,15 @@ returnUser id =
         |> Task.attempt GetUser
 
 
+returnAllUsers : Cmd Msg
+returnAllUsers =
+     fetchAllUsers
+        |> GraphQL.Client.Http.sendQuery "/graphiql"
+        |> Task.attempt FetchUserList
+
 sendQueryRequest : Request Query a -> Task GraphQL.Client.Http.Error a
 sendQueryRequest request =
     GraphQL.Client.Http.sendQuery "/" request
-
-
 
 
 userSpec : ValueSpec NonNull ObjectType User vars
@@ -108,6 +154,18 @@ userSpec =
         |> GraphQL.Request.Builder.object
         |> with (field "name" [] string)
 
+
+userListSpec : ValueSpec NonNull ObjectType UserList vars
+userListSpec =
+    let
+        user =
+            userSpec
+    in
+        UserList
+            |> GraphQL.Request.Builder.object
+            |> with (field "users" [] (list user))
+
+     
 
 
 
