@@ -20,6 +20,8 @@ import GraphQL.Request.Builder as Builder
         )
 import Html.Attributes exposing (class, id, placeholder, value)
 import Html.Events exposing (..)
+import Json.Decode as Json
+
 
 
 
@@ -34,7 +36,8 @@ main =
 
 type alias Model =
     { 
-        users : List User
+        users : List User,
+        userInput : String 
     }
 
 
@@ -56,7 +59,7 @@ subscriptions model =
     
 init : ( Model, Cmd Msg )
 init =
-    ( Model [], returnAllUsers )
+    ( Model [] "", returnAllUsers )
 
 
 
@@ -64,6 +67,8 @@ type Msg
     = GetUser (Result GraphQL.Client.Http.Error User)
     | FetchUserList (Result GraphQL.Client.Http.Error UserList)
     | DeleteUser String
+    | CreateUser 
+    | TrackInput String
     | LoadAll (Result GraphQL.Client.Http.Error User)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -77,7 +82,7 @@ update msg model =
                 log = 
                     Debug.log "users " response.users
             in 
-            ( Model response.users, Cmd.none )
+            ( Model response.users "", Cmd.none )
 
         FetchUserList (Err error) ->
             let
@@ -92,14 +97,40 @@ update msg model =
         LoadAll response -> 
             ( model, returnAllUsers )
 
+        CreateUser  -> 
+             (  Model model.users "", sendCreatedeUser model.userInput )
+
+        TrackInput string -> 
+             (  Model model.users string, Cmd.none )
+
+
 view : Model -> Html Msg
 view model =
     let
         users = 
             model.users
-                |> List.map(\user -> div [ class "user-holder" ] [ p [] [text user.name], div [ (onClick (DeleteUser user.id)), class "delete-button" ][text "X"] ] ) 
+                |> List.map(\user -> div [ class "user-holder" ] [ p [] [ text user.name ], div [ (onClick (DeleteUser user.id)), class "delete-button" ][ text "X" ] ] ) 
     in 
-    div [ class "user-wrapper" ]  users  
+   div [ class "user-wrapper"  ] [ inputView model.userInput, div [ class "user-wrapper" ]  users ]   
+
+
+
+inputView : String -> Html Msg
+inputView input = 
+    div [ class "input-wrapper" ] [ Html.input [ onInput TrackInput, value input, onEnter CreateUser,  placeholder "New User..", class "input"] []  ]
+
+
+onEnter : Msg -> Attribute Msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Json.succeed msg
+            else
+                Json.fail "not ENTER"
+    in
+        on "keydown" (Json.andThen isEnter keyCode)
+
 
 
 fetchUser : Int -> Request Query User
@@ -122,6 +153,34 @@ fetchUser id =
         userField
             |> GraphQL.Request.Builder.queryDocument
             |> GraphQL.Request.Builder.request params
+
+createNewUser : String -> Request Mutation User
+createNewUser userName = 
+    let
+        name =
+            Arg.variable (Var.required "name" .name Var.string)
+
+        userField =
+            GraphQL.Request.Builder.extract
+                (field
+                    "create_user"
+                    [ ( "name", name ) ]
+                    userSpec
+                )
+
+        params =
+            { name = userName }
+    in
+        userField
+            |> GraphQL.Request.Builder.mutationDocument
+            |> GraphQL.Request.Builder.request params
+
+sendCreatedeUser : String -> Cmd Msg
+sendCreatedeUser name =
+    name
+        |> createNewUser
+        |> GraphQL.Client.Http.sendMutation "/graphiql"
+        |> Task.attempt LoadAll
 
 
 deleteUser : String -> Request Mutation User
@@ -150,8 +209,6 @@ deleteUser id =
 fetchAllUsers : Request Query UserList
 fetchAllUsers  =
     let
-       
-
         userField =
             GraphQL.Request.Builder.extract
                 (field
