@@ -28,7 +28,7 @@ defmodule PhxAndGraphqlWeb.Graphql.Resolvers.Account do
   def update_user(_root, args, _info) do
     user = Account.get_user!(args.id)
 
-    with {:ok, %User{} = user} <- Account.update_user(user, args.params) do
+    with {:ok, %User{} = user} <- Account.update_user(user, args) do
       {:ok, user}
     end
   end

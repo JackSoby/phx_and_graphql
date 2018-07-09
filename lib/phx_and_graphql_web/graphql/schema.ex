@@ -36,8 +36,8 @@ defmodule PhxAndGraphqlWeb.Graphql.Schema do
     end
 
     field :update_user, :user do
-      arg(:id, non_null(:integer))
-      arg(:params, non_null(:update_user_params))
+      arg(:id, non_null(:string))
+      arg(:name, non_null(:string))
 
       resolve(&PhxAndGraphqlWeb.Graphql.Resolvers.Account.update_user/3)
     end

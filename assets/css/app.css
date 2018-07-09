@@ -33,3 +33,23 @@ body{
     box-shadow:         inset 0 0 10px #000000;
 }
 
+.crud-holder{
+    display: flex;
+    flex-direction: row;
+}
+
+.delete-button {
+    cursor: pointer;
+    padding: 10px;
+}
+
+
+.crud-button {
+    cursor: pointer;
+    padding: 10px;
+}
+
+
+.user-name {
+    padding: 10px;
+}
