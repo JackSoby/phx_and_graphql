@@ -23,6 +23,7 @@ main =
 type alias Model =
     { users : List User
     , userInput : String
+    , editedUser : Maybe String
     }
 
 
@@ -43,7 +44,7 @@ subscriptions model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model [] "", returnAllUsers )
+    ( Model [] "" Nothing, returnAllUsers )
 
 
 type Msg
@@ -53,6 +54,7 @@ type Msg
     | CreateUser
     | TrackInput String
     | LoadAll (Result GraphQL.Client.Http.Error User)
+    | EditUser String String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -62,11 +64,7 @@ update msg model =
             ( model, Cmd.none )
 
         FetchUserList (Ok response) ->
-            let
-                log =
-                    Debug.log "users " response.users
-            in
-            ( Model response.users "", Cmd.none )
+            ( Model response.users "" Nothing, Cmd.none )
 
         FetchUserList (Err error) ->
             let
@@ -82,10 +80,13 @@ update msg model =
             ( model, returnAllUsers )
 
         CreateUser ->
-            ( Model model.users "", sendCreatedeUser model.userInput )
+            ( Model model.users "" Nothing, checkUserInput model.editedUser model.userInput )
 
         TrackInput string ->
-            ( Model model.users string, Cmd.none )
+            ( Model model.users string model.editedUser, Cmd.none )
+
+        EditUser name id ->
+            ( Model model.users name (Just id), Cmd.none )
 
 
 view : Model -> Html Msg
@@ -93,7 +94,8 @@ view model =
     let
         users =
             model.users
-                |> List.map (\user -> div [ class "user-holder" ] [ p [] [ text user.name ], div [ onClick (DeleteUser user.id), class "delete-button" ] [ text "X" ] ])
+                |> List.sortBy .id
+                |> List.map (\user -> div [ class "user-holder" ] [ p [ class "user-name" ] [ text user.name ], div [ class "crud-holder" ] [ div [ onClick (EditUser user.name user.id), class "crud-button" ] [ text "Edit" ], div [ onClick (DeleteUser user.id), class "crud-button" ] [ text "X" ] ] ])
     in
     div [ class "user-wrapper" ] [ inputView model.userInput, div [ class "user-wrapper" ] users ]
 
@@ -159,8 +161,8 @@ createNewUser userName =
         |> Builder.request params
 
 
-sendCreatedeUser : String -> Cmd Msg
-sendCreatedeUser name =
+sendCreatededUser : String -> Cmd Msg
+sendCreatededUser name =
     name
         |> createNewUser
         |> GraphQL.Client.Http.sendMutation "/graphiql"
@@ -187,6 +189,38 @@ deleteUser id =
     userField
         |> Builder.mutationDocument
         |> Builder.request params
+
+
+editUser : String -> String -> Request Mutation User
+editUser id name =
+    let
+        userID =
+            Arg.variable (Var.required "userID" .userID Var.string)
+
+        userName =
+            Arg.variable (Var.required "name" .userName Var.string)
+
+        userField =
+            Builder.extract
+                (field
+                    "update_user"
+                    [ ( "id", userID ), ( "name", userName ) ]
+                    userSpec
+                )
+
+        params =
+            { userID = id, userName = name }
+    in
+    userField
+        |> Builder.mutationDocument
+        |> Builder.request params
+
+
+sendEditUser : String -> String -> Cmd Msg
+sendEditUser id name =
+    editUser id name
+        |> GraphQL.Client.Http.sendMutation "/graphiql"
+        |> Task.attempt LoadAll
 
 
 fetchAllUsers : Request Query UserList
@@ -253,3 +287,13 @@ userListSpec =
     UserList
         |> Builder.object
         |> with (field "users" [] (list user))
+
+
+checkUserInput : Maybe String -> String -> Cmd Msg
+checkUserInput id name =
+    case id of
+        Nothing ->
+            sendCreatededUser name
+
+        Just val ->
+            sendEditUser val name
