@@ -1,28 +1,14 @@
 module Main exposing (..)
-import GraphQL.Request.Builder exposing (..)
+
+import GraphQL.Client.Http
+import GraphQL.Request.Builder as Builder exposing (..)
 import GraphQL.Request.Builder.Arg as Arg
 import GraphQL.Request.Builder.Variable as Var
 import Html exposing (..)
-import GraphQL.Client.Http 
-import Task exposing (Task)
-import GraphQL.Request.Builder as Builder
-    exposing
-        ( NonNull
-        , ObjectType
-        , Query
-        , Request
-        , ValueSpec
-        , field
-        , int
-        , object
-        , string
-        , with
-        )
 import Html.Attributes exposing (class, id, placeholder, value)
 import Html.Events exposing (..)
 import Json.Decode as Json
-
-
+import Task exposing (Task)
 
 
 main =
@@ -35,18 +21,15 @@ main =
 
 
 type alias Model =
-    { 
-        users : List User,
-        userInput : String 
+    { users : List User
+    , userInput : String
     }
 
 
 type alias User =
-    {
-         name : String,
-         id : String
-     }
-
+    { name : String
+    , id : String
+    }
 
 
 type alias UserList =
@@ -56,20 +39,21 @@ type alias UserList =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
-    
+
+
 init : ( Model, Cmd Msg )
 init =
     ( Model [] "", returnAllUsers )
-
 
 
 type Msg
     = GetUser (Result GraphQL.Client.Http.Error User)
     | FetchUserList (Result GraphQL.Client.Http.Error UserList)
     | DeleteUser String
-    | CreateUser 
+    | CreateUser
     | TrackInput String
     | LoadAll (Result GraphQL.Client.Http.Error User)
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -79,45 +63,44 @@ update msg model =
 
         FetchUserList (Ok response) ->
             let
-                log = 
+                log =
                     Debug.log "users " response.users
-            in 
+            in
             ( Model response.users "", Cmd.none )
 
         FetchUserList (Err error) ->
             let
-                log = 
+                log =
                     Debug.log "error " error
-            in 
+            in
             ( model, Cmd.none )
 
         DeleteUser id ->
             ( model, sendDeleteUser id )
 
-        LoadAll response -> 
+        LoadAll response ->
             ( model, returnAllUsers )
 
-        CreateUser  -> 
-             (  Model model.users "", sendCreatedeUser model.userInput )
+        CreateUser ->
+            ( Model model.users "", sendCreatedeUser model.userInput )
 
-        TrackInput string -> 
-             (  Model model.users string, Cmd.none )
+        TrackInput string ->
+            ( Model model.users string, Cmd.none )
 
 
 view : Model -> Html Msg
 view model =
     let
-        users = 
+        users =
             model.users
-                |> List.map(\user -> div [ class "user-holder" ] [ p [] [ text user.name ], div [ (onClick (DeleteUser user.id)), class "delete-button" ][ text "X" ] ] ) 
-    in 
-   div [ class "user-wrapper"  ] [ inputView model.userInput, div [ class "user-wrapper" ]  users ]   
-
+                |> List.map (\user -> div [ class "user-holder" ] [ p [] [ text user.name ], div [ onClick (DeleteUser user.id), class "delete-button" ] [ text "X" ] ])
+    in
+    div [ class "user-wrapper" ] [ inputView model.userInput, div [ class "user-wrapper" ] users ]
 
 
 inputView : String -> Html Msg
-inputView input = 
-    div [ class "input-wrapper" ] [ Html.input [ onInput TrackInput, value input, onEnter CreateUser,  placeholder "New User..", class "input"] []  ]
+inputView input =
+    div [ class "input-wrapper" ] [ Html.input [ onInput TrackInput, value input, onEnter CreateUser, placeholder "New User..", class "input" ] [] ]
 
 
 onEnter : Msg -> Attribute Msg
@@ -129,8 +112,7 @@ onEnter msg =
             else
                 Json.fail "not ENTER"
     in
-        on "keydown" (Json.andThen isEnter keyCode)
-
+    on "keydown" (Json.andThen isEnter keyCode)
 
 
 fetchUser : Int -> Request Query User
@@ -140,7 +122,7 @@ fetchUser id =
             Arg.variable (Var.required "userID" .userID Var.int)
 
         userField =
-            GraphQL.Request.Builder.extract
+            Builder.extract
                 (field
                     "user"
                     [ ( "id", userID ) ]
@@ -150,18 +132,19 @@ fetchUser id =
         params =
             { userID = id }
     in
-        userField
-            |> GraphQL.Request.Builder.queryDocument
-            |> GraphQL.Request.Builder.request params
+    userField
+        |> Builder.queryDocument
+        |> Builder.request params
+
 
 createNewUser : String -> Request Mutation User
-createNewUser userName = 
+createNewUser userName =
     let
         name =
             Arg.variable (Var.required "name" .name Var.string)
 
         userField =
-            GraphQL.Request.Builder.extract
+            Builder.extract
                 (field
                     "create_user"
                     [ ( "name", name ) ]
@@ -171,9 +154,10 @@ createNewUser userName =
         params =
             { name = userName }
     in
-        userField
-            |> GraphQL.Request.Builder.mutationDocument
-            |> GraphQL.Request.Builder.request params
+    userField
+        |> Builder.mutationDocument
+        |> Builder.request params
+
 
 sendCreatedeUser : String -> Cmd Msg
 sendCreatedeUser name =
@@ -190,7 +174,7 @@ deleteUser id =
             Arg.variable (Var.required "userID" .userID Var.string)
 
         userField =
-            GraphQL.Request.Builder.extract
+            Builder.extract
                 (field
                     "delete_user"
                     [ ( "id", userID ) ]
@@ -198,32 +182,30 @@ deleteUser id =
                 )
 
         params =
-            { userID = id}
+            { userID = id }
     in
-        userField
-            |> GraphQL.Request.Builder.mutationDocument
-            |> GraphQL.Request.Builder.request params
-
+    userField
+        |> Builder.mutationDocument
+        |> Builder.request params
 
 
 fetchAllUsers : Request Query UserList
-fetchAllUsers  =
+fetchAllUsers =
     let
         userField =
-            GraphQL.Request.Builder.extract
+            Builder.extract
                 (field
                     "users"
-                    [  ]
+                    []
                     userListSpec
                 )
 
         params =
-            {  }
+            {}
     in
-        userField
-            |> GraphQL.Request.Builder.queryDocument
-            |> GraphQL.Request.Builder.request params
-
+    userField
+        |> Builder.queryDocument
+        |> Builder.request params
 
 
 returnUser : Int -> Cmd Msg
@@ -244,9 +226,10 @@ sendDeleteUser id =
 
 returnAllUsers : Cmd Msg
 returnAllUsers =
-     fetchAllUsers
+    fetchAllUsers
         |> GraphQL.Client.Http.sendQuery "/graphiql"
         |> Task.attempt FetchUserList
+
 
 sendQueryRequest : Request Query a -> Task GraphQL.Client.Http.Error a
 sendQueryRequest request =
@@ -256,10 +239,9 @@ sendQueryRequest request =
 userSpec : ValueSpec NonNull ObjectType User vars
 userSpec =
     User
-        |> GraphQL.Request.Builder.object
+        |> Builder.object
         |> with (field "name" [] string)
         |> with (field "id" [] string)
-
 
 
 userListSpec : ValueSpec NonNull ObjectType UserList vars
@@ -268,14 +250,6 @@ userListSpec =
         user =
             userSpec
     in
-        UserList
-            |> GraphQL.Request.Builder.object
-            |> with (field "users" [] (list user))
-
-     
-
-
-
-
-
-
+    UserList
+        |> Builder.object
+        |> with (field "users" [] (list user))
