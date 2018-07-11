@@ -1,5 +1,7 @@
 module Main exposing (..)
 
+import Data.User exposing (..)
+import Data.UserList exposing (..)
 import GraphQL.Client.Http
 import GraphQL.Request.Builder as Builder exposing (..)
 import GraphQL.Request.Builder.Arg as Arg
@@ -25,16 +27,6 @@ type alias Model =
     , userInput : String
     , editedUser : Maybe String
     }
-
-
-type alias User =
-    { name : String
-    , id : String
-    }
-
-
-type alias UserList =
-    { users : List User }
 
 
 subscriptions : Model -> Sub Msg
